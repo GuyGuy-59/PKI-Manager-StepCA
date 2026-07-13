@@ -1,4 +1,4 @@
-# Smallstep CA UI — Ready-to-run stack
+# PKI-Manager-StepCA
 
 A complete, self-contained Public Key Infrastructure built on
 [`step-ca`](https://smallstep.com/docs/step-ca/), packaged with Docker Compose.

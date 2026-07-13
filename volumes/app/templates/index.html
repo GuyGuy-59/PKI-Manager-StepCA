@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smallstep CA UI — Certificates</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Smallstep&nbsp;<span>CA UI</span></h1>
+    <span class="ca">pki.example.com · step-ca</span>
+    <span class="spacer"></span>
+    <span class="user">{{ user }}</span>
+    <button class="refresh" id="refresh">Refresh</button>
+    <a class="logout" href="{{ url_for('logout') }}">Sign out</a>
+  </header>
+
+  <div class="summary" id="summary">
+    <div class="cell valid"><div class="n" data-k="valid">–</div><div class="k">Valid</div></div>
+    <div class="cell expiring"><div class="n" data-k="expiring">–</div><div class="k">Expiring soon</div></div>
+    <div class="cell expired"><div class="n" data-k="expired">–</div><div class="k">Expired</div></div>
+    <div class="cell revoked"><div class="n" data-k="revoked">–</div><div class="k">Revoked</div></div>
+  </div>
+
+  <div class="filters">
+    <input type="search" id="search" placeholder="cn, san, serial…" autocomplete="off">
+    <span class="chip valid on"    data-f="valid"><span class="dot"></span>valid</span>
+    <span class="chip expiring on" data-f="expiring"><span class="dot"></span>expiring</span>
+    <span class="chip expired on"  data-f="expired"><span class="dot"></span>expired</span>
+    <span class="chip revoked on"  data-f="revoked"><span class="dot"></span>revoked</span>
+  </div>
+
+  <div class="list" id="list">
+    <div class="empty">Loading certificates…</div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="{{ url_for('static', filename='app.js') }}" data-revoke="{{ 'true' if revoke_enabled else 'false' }}"></script>
+</body>
+</html>

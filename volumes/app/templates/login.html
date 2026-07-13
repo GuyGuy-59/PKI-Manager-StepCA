@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smallstep CA UI — Sign in</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="login-wrap">
+  <form class="login-card" method="post" novalidate>
+    <h1>Smallstep&nbsp;<span>CA UI</span></h1>
+    <p class="sub">Sign in to view the certificate dashboard.</p>
+
+    {% if error %}<div class="login-error">{{ error }}</div>{% endif %}
+
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" autocomplete="username" autofocus required>
+
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+    <button type="submit">Sign in</button>
+  </form>
+</div>
+</body>
+</html>

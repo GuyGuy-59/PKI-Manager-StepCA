@@ -22,10 +22,13 @@
 
 set -euo pipefail
 
+# ---- Domain (.env) -----------------------------------------------------------
+[[ -f .env ]] || { echo "Missing .env, copy .env.example to .env and set CA_DNS first." >&2; exit 1; }
+source .env
+: "${CA_DNS}"
+
 # ---- Settings (edit to taste) ----------------------------------------------
-DOMAIN="example.com"
 CA_NAME="Smallstep CA UI"
-CA_DNS="pki.${DOMAIN}"
 ROOT_SUBJECT="Smallstep CA UI Root CA"
 INT_SUBJECT="Smallstep CA UI Intermediate CA"
 PROVISIONER_NAME="jwk"
@@ -192,12 +195,11 @@ chmod_in_container 600 "$STEP_DIR/secrets/revoke_jwk.json"
 ok "Dashboard revocation key written to ${STEP_DIR}/secrets/revoke_jwk.json."
 
 # ---- 5. Leaf template ------------------------------------------------------
-# The template is checked into the repo directly at its runtime location
-# (kept out of the --force wipe above), so there is nothing to install here.
-info "Checking leaf certificate template…"
-[[ -f "$STEP_DIR/config/templates/certs/x509/leaf.tpl" ]] \
-    || die "Missing template: $STEP_DIR/config/templates/certs/x509/leaf.tpl"
-ok "Template present."
+info "Generating leaf certificate template…"
+TPL_DIR="$STEP_DIR/config/templates/certs/x509"
+[[ -f "$TPL_DIR/leaf.tpl.tmpl" ]] || die "Missing template source: $TPL_DIR/leaf.tpl.tmpl"
+sed "s/\${CA_DNS}/$CA_DNS/g" "$TPL_DIR/leaf.tpl.tmpl" > "$TPL_DIR/leaf.tpl"
+ok "Template generated."
 
 # ---- 6. ca.json ------------------------------------------------------------
 info "Writing ca.json…"

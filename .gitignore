@@ -16,7 +16,11 @@ root-ca-offline/
 # Generated CA (keys + config). Regenerate with init-ca.sh.
 volumes/stepca/certs/
 volumes/stepca/config/ca.json
+volumes/stepca/config/templates/certs/x509/leaf.tpl
 
 # Python
 __pycache__/
 *.pyc
+
+# Local domain configuration
+.env

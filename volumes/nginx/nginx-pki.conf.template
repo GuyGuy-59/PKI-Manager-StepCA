@@ -1,0 +1,39 @@
+# Smallstep CA UI — HTTP distribution + dashboard reverse proxy (port 80).
+
+server {
+    listen 80;
+    server_name ${CA_DNS};
+
+    resolver 127.0.0.11 valid=10s ipv6=off;   # Docker internal DNS
+
+    # --- CRL: proxy to step-ca's /crl endpoint ---
+    location = /intermediate_ca.crl {
+        set $ca_backend https://pki:443;
+        proxy_pass $ca_backend/crl;
+        proxy_ssl_verify off;
+        proxy_ssl_server_name on;
+        proxy_ssl_name ${CA_DNS};
+        proxy_set_header Host ${CA_DNS};
+        proxy_hide_header Content-Type;
+        add_header Content-Type application/pkix-crl;
+        add_header Cache-Control "public, max-age=3600";
+    }
+
+    # --- AIA: intermediate certificate (static, world-readable) ---
+    location = /intermediate_ca.crt {
+        alias /etc/pki/intermediate_ca.crt;
+        default_type application/pkix-cert;
+        add_header Cache-Control "public, max-age=86400";
+    }
+
+    # --- Dashboard (reverse proxy to Flask) ---
+    location / {
+        set $dash_backend http://pki-dashboard:5000;
+        proxy_pass $dash_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+}

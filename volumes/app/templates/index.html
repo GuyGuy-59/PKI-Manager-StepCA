@@ -8,28 +8,33 @@
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>Smallstep&nbsp;<span>CA UI</span></h1>
-    <span class="ca">pki.example.com · step-ca</span>
-    <span class="spacer"></span>
-    <span class="user">{{ user }}</span>
-    <button class="refresh" id="refresh">Refresh</button>
-    <a class="logout" href="{{ url_for('logout') }}">Sign out</a>
-  </header>
+  <div class="sticky-top">
+    <header>
+      <h1>Smallstep&nbsp;<span>CA UI</span></h1>
+      <span class="ca">{{ ca_name }} · step-ca</span>
+      <span class="spacer"></span>
+      <span class="user">{{ user }}</span>
+      <a class="ca-dl" href="{{ url_for('main.api_ca_cert') }}" download>Download CA cert</a>
+      <button class="refresh" id="refresh">Refresh</button>
+      <a class="logout" href="{{ url_for('main.logout') }}">Sign out</a>
+    </header>
 
-  <div class="summary" id="summary">
-    <div class="cell valid"><div class="n" data-k="valid">–</div><div class="k">Valid</div></div>
-    <div class="cell expiring"><div class="n" data-k="expiring">–</div><div class="k">Expiring soon</div></div>
-    <div class="cell expired"><div class="n" data-k="expired">–</div><div class="k">Expired</div></div>
-    <div class="cell revoked"><div class="n" data-k="revoked">–</div><div class="k">Revoked</div></div>
-  </div>
+    <div class="summary" id="summary">
+      <div class="cell valid"><div class="n" data-k="valid">–</div><div class="k">Valid</div></div>
+      <div class="cell expiring"><div class="n" data-k="expiring">–</div><div class="k">Expiring soon</div></div>
+      <div class="cell expired"><div class="n" data-k="expired">–</div><div class="k">Expired</div></div>
+      <div class="cell revoked"><div class="n" data-k="revoked">–</div><div class="k">Revoked</div></div>
+    </div>
 
-  <div class="filters">
-    <input type="search" id="search" placeholder="cn, san, serial…" autocomplete="off">
-    <span class="chip valid on"    data-f="valid"><span class="dot"></span>valid</span>
-    <span class="chip expiring on" data-f="expiring"><span class="dot"></span>expiring</span>
-    <span class="chip expired on"  data-f="expired"><span class="dot"></span>expired</span>
-    <span class="chip revoked on"  data-f="revoked"><span class="dot"></span>revoked</span>
+    <div class="filters">
+      <input type="search" id="search" placeholder="cn, san, serial…" autocomplete="off">
+      <span class="chip valid on"    data-f="valid"><span class="dot"></span>valid</span>
+      <span class="chip expiring on" data-f="expiring"><span class="dot"></span>expiring</span>
+      <span class="chip expired on"  data-f="expired"><span class="dot"></span>expired</span>
+      <span class="chip revoked on"  data-f="revoked"><span class="dot"></span>revoked</span>
+      <span class="spacer"></span>
+      {% if issue_enabled %}<button class="issue" id="issueBtn">Issue certificate</button>{% endif %}
+    </div>
   </div>
 
   <div class="list" id="list">
@@ -39,8 +44,78 @@
   <div class="foot" id="foot"></div>
 </div>
 
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <h2 id="modalTitle">—</h2>
+      <button class="modal-close" id="modalClose" aria-label="Close" type="button">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+{% if issue_enabled %}
+<div class="modal-backdrop" id="issueBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="issueTitle">
+    <div class="modal-head">
+      <h2 id="issueTitle">Issue certificate</h2>
+      <button class="modal-close" id="issueClose" aria-label="Close" type="button">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form class="issue-form" id="issueForm">
+        <label for="issueCertType">Certificate type</label>
+        <select id="issueCertType" name="cert_type">
+          <option value="server" selected>Server (TLS server auth)</option>
+          <option value="client">Client (TLS client auth)</option>
+        </select>
+
+        <label for="issueCn">Common Name</label>
+        <input type="text" id="issueCn" name="cn" placeholder="host.example.com" autocomplete="off" required>
+
+        <label for="issueSans">Subject Alternative Names <span class="hint">(comma-separated, optional — defaults to the CN)</span></label>
+        <input type="text" id="issueSans" name="sans" placeholder="host.example.com, alt.example.com" autocomplete="off">
+
+        <label for="issueKeyType">Key type</label>
+        <select id="issueKeyType" name="key_type">
+          <option value="ec256" selected>EC P-256</option>
+          <option value="ec384">EC P-384</option>
+          <option value="ec521">EC P-521</option>
+          <option value="rsa2048">RSA 2048</option>
+          <option value="rsa3072">RSA 3072</option>
+          <option value="rsa4096">RSA 4096</option>
+          <option value="ed25519">Ed25519</option>
+        </select>
+
+        <div class="issue-actions">
+          <button type="submit" id="issueSubmit">Issue</button>
+        </div>
+        <p class="hint">The private key is generated on the server for this request only and never
+        stored — download it below, it cannot be retrieved again.</p>
+
+        <div class="issue-downloads" id="issueResult">
+          <a href="#" id="dlCert" class="dl-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            Certificate
+          </a>
+          <a href="#" id="dlChain" class="dl-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            Full chain
+          </a>
+          <a href="#" id="dlKey" class="dl-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            Private key
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="toast" id="toast"></div>
 
-<script src="{{ url_for('static', filename='app.js') }}" data-revoke="{{ 'true' if revoke_enabled else 'false' }}"></script>
+<script src="{{ url_for('static', filename='app.js') }}"
+        data-revoke="{{ 'true' if revoke_enabled else 'false' }}"
+        data-issue="{{ 'true' if issue_enabled else 'false' }}"></script>
 </body>
 </html>

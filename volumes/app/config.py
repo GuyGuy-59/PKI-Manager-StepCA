@@ -24,9 +24,11 @@ def _read_pg_password() -> str:
     return "CHANGEME"
 
 
-def _read_revoke_jwk() -> tuple:
+def _read_jwk_provisioner() -> tuple:
     # Written by init-ca.sh (decrypted JWK provisioner key), mounted read-only.
-    # Absent until init-ca.sh has run, in which case revocation stays disabled.
+    # Absent until init-ca.sh has run, in which case both revocation and
+    # issuance stay disabled. Filename kept as revoke_jwk.json (that's what
+    # init-ca.sh writes) even though the key now also signs issuance tokens.
     f = Path("/app/secrets/revoke_jwk.json")
     if f.is_file():
         try:
@@ -35,6 +37,18 @@ def _read_revoke_jwk() -> tuple:
         except (ValueError, OSError):
             pass
     return "", None
+
+
+def _read_ca_dns() -> str:
+    f = Path("/app/secrets/ca.json")
+    if f.is_file():
+        try:
+            names = json.loads(f.read_text()).get("dnsNames") or []
+            if names:
+                return names[0]
+        except (ValueError, OSError):
+            pass
+    return "unconfigured-ca"
 
 
 # --- PostgreSQL (step-ca database) ------------------------------------------
@@ -106,19 +120,23 @@ def _get_or_create_secret_key() -> str:
 # --- Dashboard login ----------------------------------------------------------
 SECRET_KEY = _get_or_create_secret_key()
 
-# --- Revocation -------------------------------------------------------------
-# Enabled automatically once init-ca.sh has written volumes/stepca/secrets/
-# revoke_jwk.json. Revocation uses step-ca's HTTP API — no subprocess, no
-# docker socket.
+# --- Revocation & issuance ---------------------------------------------------
+# Both enabled automatically once init-ca.sh has written volumes/stepca/secrets/
+# revoke_jwk.json. Both go through step-ca's HTTP API, signed with the "jwk"
+# provisioner's key — no subprocess, no docker socket.
 CA_URL = "https://pki:443"            # docker-network address actually contacted
 # step-ca authorizes provisioner tokens by matching the JWT "aud" claim against
-# its own configured dnsNames (see ca.json) — that's pki.example.com, not the
-# "pki" service name above, so the token audience must be built from this one.
-CA_AUDIENCE = "https://pki.example.com:443"
+# its own configured dnsNames (see ca.json) — that's CA_DNS, not the "pki"
+# service name above, so the token audience must be built from this one.
+CA_DNS = _read_ca_dns()
+CA_AUDIENCE = f"https://{CA_DNS}:443"
+# Shown in the dashboard header — same CA_DNS, no separate name to keep in sync.
+CA_DISPLAY_NAME = CA_DNS
 CA_VERIFY = False                    # or "/app/root_ca.crt" for strict verification
-REVOKE_PROVISIONER_NAME = "jwk"
-REVOKE_PROVISIONER_KID, REVOKE_PROVISIONER_JWK = _read_revoke_jwk()
-REVOKE_ENABLED = REVOKE_PROVISIONER_JWK is not None
+JWK_PROVISIONER_NAME = "jwk"
+JWK_PROVISIONER_KID, JWK_PROVISIONER_JWK = _read_jwk_provisioner()
+REVOKE_ENABLED = JWK_PROVISIONER_JWK is not None
+ISSUE_ENABLED = JWK_PROVISIONER_JWK is not None
 
 # --- Server -----------------------------------------------------------------
 # Only used by `python app.py` for local dev; the container runs uvicorn/asgi.py.

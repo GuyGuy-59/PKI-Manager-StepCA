@@ -31,6 +31,6 @@
 {{- end }}
         "extKeyUsage": ["serverAuth"],
 {{- end }}
-        "issuingCertificateURL": "http://pki.test.com/intermediate_ca.crt",
-        "crlDistributionPoints": "http://pki.test.com/intermediate_ca.crl"
+        "issuingCertificateURL": "http://${CA_DNS}/intermediate_ca.crt",
+        "crlDistributionPoints": "http://${CA_DNS}/intermediate_ca.crl"
 }

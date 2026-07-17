@@ -80,7 +80,13 @@ header button.refresh:hover { border-color: var(--accent); color: var(--accent);
 .chip.expired .dot { background: var(--expired); }
 .chip.revoked .dot { background: var(--revoked); }
 
-.list { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+.list { border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
+        max-height: calc(100vh - 320px); min-height: 240px; overflow-y: auto; }
+.list::-webkit-scrollbar { width: 10px; }
+.list::-webkit-scrollbar-track { background: transparent; }
+.list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; border: 2px solid var(--panel); }
+.list::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
+.list { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .row { display: grid; grid-template-columns: 4px 1fr 200px 110px 90px;
        gap: 14px; align-items: center; padding: 13px 16px;
        border-bottom: 1px solid var(--line-2); cursor: pointer; }
